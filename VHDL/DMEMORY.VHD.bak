@@ -1,0 +1,62 @@
+                        --  Dmemory module (implements the data
+                        --  memory for the MIPS computer)
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.STD_LOGIC_ARITH.ALL;
+USE IEEE.STD_LOGIC_SIGNED.ALL;
+
+LIBRARY altera_mf;
+USE altera_mf.altera_mf_components.all;
+
+ENTITY dmemory IS
+    GENERIC (bus_width : INTEGER := 10; BUS_address: INTEGER :=8); -- QUARTUS MODE = 12; 10 | MODELSIM = 8; 8
+             
+    PORT(  
+            address                : IN     STD_LOGIC_VECTOR( bus_width-1 DOWNTO 0 );
+            write_data             : IN     STD_LOGIC_VECTOR( 31 DOWNTO 0 );
+            INTR                   : IN     STD_LOGIC;
+            MemRead			       : IN     STD_LOGIC;
+            Memwrite      	       : IN     STD_LOGIC;
+            type_io                  : IN     STD_LOGIC_VECTOR(BUS_address-1 DOWNTO 0);
+			clock	               : IN     STD_LOGIC;
+			reset            	   : IN     STD_LOGIC;
+			read_data              : OUT    STD_LOGIC_VECTOR( 31 DOWNTO 0 )
+			);
+END dmemory;
+
+ARCHITECTURE behavior OF dmemory IS
+
+SIGNAL type_addr_mux : STD_LOGIC_VECTOR(BUS_address-1 DOWNTO 0 );
+SIGNAL WriteToMem : STD_LOGIC;
+SIGNAL clk_Not	: STD_LOGIC;
+
+BEGIN
+
+
+-- Load memory address register with write clock
+    clk_Not <= NOT clock;
+        
+    
+                 
+    WriteToMem <='1' when ( address(bus_width-1)='0' and memwrite ='1' ) else '0';
+    type_addr_mux <= address(BUS_address-1 downto 0) when not( INTR = '1') ELSE type_io;
+
+    data_memory : altsyncram
+    GENERIC MAP  (
+        operation_mode         => "SINGLE_PORT",
+        width_a                => 32,
+        widthad_a              => BUS_address,
+        lpm_type               => "altsyncram",
+        outdata_reg_a          => "UNREGISTERED",
+        init_file              => "C:\Users\evgen\Desktop\labs\lab6\312124662_315822221\Interrupt_based_IO\test3\dmemory.hex",
+        intended_device_family => "Cyclone"
+        )
+    PORT MAP (
+        wren_a    => WriteToMem,
+        clock0    => clk_Not,
+        address_a => type_addr_mux,  -- CHANGE THIS WHEN MOVING TO QUARTUS : address(9 downto 0)
+        data_a    => write_data,
+        q_a       => read_data    );
+    
+END behavior;
+
